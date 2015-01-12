@@ -1033,7 +1033,7 @@ the predicate @racket[%not] is defined as follows:
 
 @racketblock+eval[#:eval racklog-eval
 (define %not
-  (%rel ()
+  (%rel (g)
     [(g) g ! %fail]
     [(g) %true]))
 ]
