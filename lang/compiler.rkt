@@ -5,17 +5,20 @@
          datalog/ast
          datalog/eval
          racklog
+         racket/pretty
          (only-in racklog/lang/lang
                   racklog-answers->literals))
-(require (for-template racklog
-                       datalog/eval
-                       (only-in racklog/lang/lang
-                                racklog-answers->literals)))
 
 (provide/contract
  [compile-program (program/c . -> . syntax?)]
  [compile-statement (statement/c . -> . syntax?)])
 
+;; The result of `compile-program` already has bindings for
+;; everything that it uses, so it can be incorprated into
+;; a context without any binding --- and that context must
+;; have no bindings if it would create ambiguities --- but
+;; the context must ensure that `rackloc/lang/lang` is
+;; instantiated.
 (define (compile-program p)
   (with-syntax ([(pred ...)
                  (map pred->stx
@@ -25,7 +28,7 @@
                                   (coerce-sym 
                                    (clause-predicate (assertion-clause s))))))])
     (quasisyntax
-     (#%module-begin 
+     (#%module-begin
       (require racklog
                datalog/eval) 
       (define pred %empty-rel)
@@ -40,6 +43,10 @@
    [(? symbol? s)
     s]))
 
+(define (sym-set->id-list s)
+  (map (lambda (sym) (datum->syntax #f sym))
+       (set->list s)))
+
 (define pred-cache (make-hasheq))
 (define (pred->stx maybe-p)
   (define p (coerce-sym maybe-p))
@@ -53,7 +60,7 @@
      (define srcstx (datum->syntax #f 'x srcloc))
      (quasisyntax/loc srcstx
        (%assert! #,(pred->stx (clause-predicate c))
-                 #,(set->list (clause-variables c))
+                 #,(sym-set->id-list (clause-variables c))
                  [#,(compile-clause-head c)
                   #,@(compile-clause-body c)]))]
     [(retraction srcloc c)
@@ -66,7 +73,7 @@
        (print-questions
         (racklog-answers->literals
          #,l
-         (%find-all #,(set->list (literal-variables l))
+         (%find-all #,(sym-set->id-list (literal-variables l))
                     #,(compile-literal l)))))]))
 
 (define (clause-predicate c)

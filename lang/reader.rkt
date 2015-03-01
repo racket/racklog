@@ -1,6 +1,6 @@
 (module reader syntax/module-reader
   ; XXX Copied shamelessly from datalog/lang/reader (some things should be better designed to share
-  #:language 'racklog/lang/lang
+  #:language 'racklog/lang/empty
   #:read (lambda ([in (current-input-port)]) (this-read-syntax #f in))
   #:read-syntax this-read-syntax
   #:whole-body-readers? #t  
