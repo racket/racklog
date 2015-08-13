@@ -42,13 +42,13 @@
         new-ht)))
 
 ; compound structs
-(require unstable/sequence)
+(require racket/sequence)
 (define (in-compound-struct s)
   (define-values (stype _) (struct-info s))
   (define-values (name init-field-cnt auto-field-cnt accessor-proc mutator-proc immutable-k-list super-type skipped?) (struct-type-info stype))
   (define total-field-cnt (+ init-field-cnt)
     #;(compound-struct-type-field-cnt stype))
-  (sequence-lift (curry accessor-proc s) (in-range total-field-cnt)))
+  (sequence-map (curry accessor-proc s) (in-range total-field-cnt)))
 
 (define (compound-struct-map f s)
   (define-values (stype _) (struct-info s))
