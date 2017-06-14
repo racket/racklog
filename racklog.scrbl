@@ -522,7 +522,7 @@ latter is defined in the usual manner:
 (define racket-factorial
   (lambda (n)
     (if (= n 0) 1
-        (* n (factorial
+        (* n (racket-factorial
 	       (- n 1))))))
 ]
 
@@ -733,7 +733,7 @@ enable the check,
 (use-occurs-check? #t)
 ]
 
-@section[#:tag "and-or"]{Conjuctions and Disjunctions}
+@section[#:tag "and-or"]{Conjunctions and Disjunctions}
 
 Goals may be combined using the forms @racket[%and]
 and @racket[%or]
@@ -1158,7 +1158,7 @@ The accepted syntax is available in the @secref[#:doc '(lib "datalog/scribblings
   @racket[(or/c pair? vector? mpair? box? hash? compound-struct?)].}
 
 @defproc[(unifiable? [x any/c]) boolean?]{
-  Identifies values that may appear in Racklog programs. Essentialy either an
+  Identifies values that may appear in Racklog programs. Essentially either an
   @racket[atom?], @racket[logic-var?], or @racket[compound?] that contains
   @racket[unifiable?]s.}
 
