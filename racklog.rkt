@@ -206,10 +206,7 @@
     ((%= (copy s) c) fk)))
 
 (define (%not g)
-  (lambda (fk)
-    (if (let/racklog-cc k
-          ((logic-var-val* g) (lambda (d) (k #f))))
-        (fk 'fail) fk)))
+  (%if-then-else g %fail %true))
 
 (define (%empty-rel . args)
   %fail)
