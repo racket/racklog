@@ -14,4 +14,7 @@
    => '((x . _))
 
    (%which (x) (%or (%cut-delimiter (%or (%and (%= x 1) ! %fail) %true)) %true))
+   => '((x . _))
+
+   (%which (x) (%or (%cut-delimiter (%or (%and ! (%= x 1) %fail) %true)) %true))
    => '((x . _))))
