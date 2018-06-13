@@ -440,6 +440,9 @@
     (define (cleanup-n-fail s)
       (cleanup s)
       (fk 'fail))
+    (define (unwind-trail s)
+      (cleanup s)
+      (fk 'unwind-trail))
     (define (unify1 t1 t2 s)
       (cond [(eqv? t1 t2) s]
             [(logic-var? t1)
@@ -502,7 +505,8 @@
     (values
      (λ () (cleanup s))
      (lambda (d)
-       (cleanup-n-fail s)))))
+       ((if (eq? d 'unwind-trail) unwind-trail cleanup-n-fail)
+        s)))))
 
 (define-syntax-rule (or* x f ...)
   (or (f x) ...))
