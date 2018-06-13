@@ -178,7 +178,7 @@
 (define ((make-negation p) . args) 
   ;basically inlined cut-fail
   (lambda (fk)
-    (if (let/racklog-fk k
+    (if (let/racklog-sk k
           ((apply p args) (make-racklog-fk (lambda (d) (k #f)))))
         (fk 'fail)
         fk)))
@@ -304,9 +304,10 @@
        (%let (v ...)
          (set-box! *more-fk*
                    ((logic-var-val* g)
-                    (lambda (d)
-                      (set-box! *more-fk* #f)
-                      (abort-to-racklog-prompt #f))))
+                    (make-racklog-fk
+                     (lambda (d)
+                       (set-box! *more-fk* #f)
+                       (abort-to-racklog-prompt #f)))))
          (abort-to-racklog-prompt
           (list (cons 'v (logic-var-val* v))
                 ...)))))
