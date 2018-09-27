@@ -30,6 +30,7 @@
     (quasisyntax
      (#%module-begin
       (require racklog
+               (only-in racket/base #%datum)
                datalog/eval) 
       (define pred %empty-rel)
       ...
