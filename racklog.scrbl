@@ -363,6 +363,29 @@ bindings only for the local variables that @emph{it}
 introduces.  Thus, this query emits @racketresult[()] five times before
 @racket[(%more)] finally returns @racket[#f].
 
+However, note that, like conventional Racket @racket[let], the body forms
+of @racket[%let] are evaluated in turn with the last form in tail position.
+Thus, to combine multiple goals involving a new logical variable introduced
+by @racket[%let], it is necessary to wrap the body in an @racket[%and] form.
+
+For example:
+
+@interaction[#:eval racklog-eval
+(%which (d)
+  (%let (a p)
+    (%and (%= p (cons 1 2))
+          (%= p (cons a d)))))
+]
+
+whereas
+
+@interaction[#:eval racklog-eval
+(%which (d)
+  (%let (a p)
+    (%= p (cons 1 2)) (code:comment #,(t "This goal is ignored"))
+    (%= p (cons a d))))
+]
+
 @section[#:tag "racket-w-logic"]{Using Conventional Racket Expressions in Racklog}
 
 The arguments of Racklog predicates can be any Racket
