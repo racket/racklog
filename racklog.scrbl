@@ -1139,6 +1139,112 @@ Racklog also provides two variants of these set predicates,
 viz., @racket[%bag-of-1] and @racket[%set-of-1].  These act like @racket[%bag-of]
 and @racket[%set-of] but fail if the resulting bag or set is empty.
 
+@section[#:tag "meta"]{Higher-order Predicates}
+
+Racklog provides two predicates for defining relations involving arbitrary
+predicates.
+
+@subsection{@racket[%call]}
+
+The goal
+
+@racketblock[
+(%call P E ...)
+]
+
+succeeds if @racket[P] is a predicate that accepts as many arguments as there
+are @racket[E]s and if the goal @racket[(P E ...)] succeeds. For example:
+
+@interaction[#:eval racklog-eval
+(%which () (%call %knows 'Odysseus 'TeX))
+]
+
+In this case, the goal
+
+@racketblock[
+(%call %knows 'Odysseus 'TeX)
+]
+
+is equivalent to
+
+@racketblock[
+(%knows 'Odysseus 'TeX)
+]
+
+The @racket[%call] predicate is used to define relations which depend on the
+behavior of other predicates. We can define a predicate which tests for unary
+predicates that succeed with @racket['Odysseus] as their argument:
+
+@racketblock+eval[#:eval racklog-eval
+(define (%odyssean p)
+  (%call p 'Odysseus))
+]
+
+For example:
+
+@interaction[#:eval racklog-eval
+(%which () (%odyssean %computer-literate))
+]
+
+This succeeds because @racket[(%computer-literate 'Odysseus)] succeeds.
+
+@interaction[#:eval racklog-eval
+(%which () (%odyssean %compound))
+]
+
+This fails because @racket[(%compound 'Odysseus)] fails.
+
+The important feature of @racket[%call] is that it also works if the predicate
+argument is a logic variable:
+
+@interaction[#:eval racklog-eval
+(%which ()
+  (%let (p)
+    (%and (%member p (list %computer-literate %compound))
+          (%odyssean p))))
+]
+
+It is necessary to use @racket[%call] in the definition of @racket[%odyssean],
+because the form @racket[(p 'Odysseus)] is not a valid procedure application
+when @racket[p] is a logic variable.
+
+However, the predicate argument to @racket[%call] must be instantiated.
+Since the set of defined predicates is not enumerable by Racklog, an unbound
+query will fail:
+
+@interaction[#:eval racklog-eval
+(%which (p) (%odyssean p))
+]
+
+@subsection{@racket[%maplist]}
+
+The goal
+
+@racketblock[
+(%maplist P L ...+)
+]
+
+succeeds if all the @racket[L]s are lists of equal length, and the goal
+@racket[(%call P E ...)] succeeds for each set of elements @racket[E], ...
+of the @racket[L]s. For example:
+
+@interaction[#:eval racklog-eval
+(%which () (%maplist %knows '(Odysseus Penelope) '(TeX Prolog)))
+]
+
+In this case, the goal
+
+@racketblock[
+(%maplist %knows '(Odysseus Penelope) '(TeX Prolog))
+]
+
+is equivalent to
+
+@racketblock[
+(%and (%knows 'Odysseus 'TeX)
+      (%knows 'Penelope 'Prolog))
+]
+
 @section{Racklog Module Language}
 
 @defmodulelang[@racketmodname[racklog] #:module-paths (racklog/lang/lang)]
@@ -1418,6 +1524,21 @@ it.}
 @racket[%nonvar] is the negation of @racket[%var].
 The goal @racket[(%nonvar E)] succeeds if @racket[E] is completely
 instantiated, ie, it has no unbound variable in it.}
+
+@subsection{Higher-order Predicates}
+
+@defpred[(%call [P unifiable?] [E unifiable?] ...)]{
+The goal @racket[(%call P E ...)] succeeds if @racket[P] is a predicate
+accepting as many arguments as there are @racket[E]s and the goal
+@racket[(P E ...)] succeeds.
+}
+
+@defpred[(%maplist [P unifiable?] [L unifiable?] ...+)]{
+The goal @racket[(%maplist P L ...)] succeeds if all the values
+@racket[L], ..., are lists of equal length, and if the goal
+@racket[(%call P E ...)] succeeds for each set of values @racket[E], ...,
+taken in turn from each of the lists @racket[L], ...
+}
 
 @subsection{Racklog Variable Manipulation}
 
