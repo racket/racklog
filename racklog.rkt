@@ -36,6 +36,31 @@
               ...)
          __fk)))))
 
+(define (%call pred . args)
+  (lambda (fk)
+    (let ([pred-v (if (and (logic-var? pred) (unbound-logic-var? pred))
+                      (fk 'fail)
+                      (logic-var-val* pred))])
+      (if (and (procedure? pred-v) (procedure-arity-includes? pred-v (length args)))
+          ((apply pred-v args) fk)
+          (fk 'fail)))))
+
+(define (%maplist pred lst . rest)
+  (define lsts (cons lst rest))
+  (lambda (fk)
+    (let/racklog-sk sk
+      ; Base case (all lists empty)
+      (let/racklog-fk fk
+        (sk (foldl (lambda (lst fk) ((%= lst '()) fk)) fk lsts)))
+      ; Call and recurse
+      (let/racklog-fk fk
+        (sk (let ([heads (map (lambda (lst) (_)) lsts)]
+                  [tails (map (lambda (lst) (_)) lsts)])
+              (let* ([fk (foldl (lambda (lst h t fk) ((%= lst (cons h t)) fk)) fk lsts heads tails)]
+                     [fk ((apply %call pred heads) fk)])
+                ((apply %maplist pred tails) fk)))))
+      (fk 'fail))))
+
 (define-syntax-parameter !
   (λ (stx) (raise-syntax-error '! "May only be used syntactically inside %rel or %cut-delimiter expression." stx)))
 
@@ -406,6 +431,7 @@
  [%append (unifiable? unifiable? unifiable? . -> . goal/c)]
  [%bag-of (unifiable? goal/c unifiable? . -> . goal/c)]
  [%bag-of-1 (unifiable? goal/c unifiable? . -> . goal/c)]
+ [%call (unifiable? unifiable? ... . -> . goal/c)]
  [%compound (unifiable? . -> . goal/c)]
  [%constant (unifiable? . -> . goal/c)]
  [%copy (unifiable? unifiable? . -> . goal/c)]
@@ -413,6 +439,7 @@
  [%fail goal/c]
  [%freeze (unifiable? unifiable? . -> . goal/c)]
  [%if-then-else (goal/c goal/c goal/c . -> . goal/c)]
+ [%maplist (unifiable? unifiable? unifiable? ... . -> . goal/c)]
  [%melt (unifiable? unifiable? . -> . goal/c)]
  [%melt-new (unifiable? unifiable? . -> . goal/c)]
  [%member (unifiable? unifiable? . -> . goal/c)]

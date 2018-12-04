@@ -559,5 +559,43 @@
 
  (%which () %true %true) => empty
  (%more) => #f
- 
+
+ (%which () (%call %= 1 1)) => empty
+ (%more) => #f
+ (%which () (%call %= 1 2)) => #f
+ (%which () (%call %=)) => #f
+ (%which () (%call %= 1 2 3)) => #f
+ (%which () (%call (_) 1)) => #f
+ (%which () (%call 'not-a-procedure 1)) => #f
+
+ (let* ([%foo (lambda (x) (%= x 'foo))]
+        [%bar (lambda (x) (%= x 'bar))]
+        [%foobar (lambda (x) (%or (%foo x) (%bar x)))])
+   (test (%which (x) (%call %foobar x)) => `([x . foo])
+         (%more) => `([x . bar])
+         (%more) => #f
+         (%which (x) (%let (p) (%and (%or (%= p %foo) (%= p %bar)) (%call p x))))
+         => `([x . foo])
+         (%more) => `([x . bar])
+         (%more) => #f))
+
+ (%which () (%maplist %= '(1 2 3) '(1 2 3))) => empty
+ (%more) => #f
+ (%which () (%maplist %= '(1 2 3) '(3 2 1))) => #f
+ (%more) => #f
+ (%which () (%maplist %= '(1 2 3) '(1 2))) => #f
+ (%which () (%maplist %= '(1 2 3) 'bad)) => #f
+ (%which () (%maplist %= '(1 2 3))) => #f
+ (%which () (%maplist %= '(1) '(2) '(3))) => #f
+ (%which () (%maplist %= '() '())) => empty
+ (%more) => #f
+ (%which (x) (%maplist %= '(1 2 3) (cons 1 x))) => `([x . (2 3)])
+ (%more) => #f
+ (%which (p) (%or (%= p %=) (%= p %/=) (%= p %<=))
+             (%maplist p '(1 2 3) '(2 3 4)))
+ => `([p . ,%/=])
+ (%more) => `([p . ,%<=])
+ (%more) => #f
+ (%which () (%call %maplist %var (list (_)))) => empty
+ (%more) => #f
  )
