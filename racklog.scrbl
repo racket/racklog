@@ -1538,6 +1538,14 @@ The goal @racket[(%maplist P L ...)] succeeds if all the values
 @racket[L], ..., are lists of equal length, and if the goal
 @racket[(%call P E ...)] succeeds for each set of values @racket[E], ...,
 taken in turn from each of the lists @racket[L], ...
+
+As an example, in particular the goal
+@racket[(%maplist %<= '(1 2 3) '(4 5 6))] is equivalent to
+@racketblock[
+(%and (%<= 1 4)
+      (%<= 2 5)
+      (%<= 3 6))
+]
 }
 
 @subsection{Racklog Variable Manipulation}
