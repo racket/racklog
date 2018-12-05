@@ -1204,10 +1204,6 @@ argument is a logic variable:
           (%odyssean p))))
 ]
 
-It is necessary to use @racket[%call] in the definition of @racket[%odyssean],
-because the form @racket[(p 'Odysseus)] is not a valid procedure application
-when @racket[p] is a logic variable.
-
 However, the predicate argument to @racket[%call] must be instantiated.
 Since the set of defined predicates is not enumerable by Racklog, an unbound
 query will fail:

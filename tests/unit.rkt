@@ -579,6 +579,11 @@
          (%more) => `([x . bar])
          (%more) => #f))
 
+ (%which () (%let (p) (%and (%= p %<=) (p 4 7)))) => empty
+ (%more) => #f
+ (%which () (%let (p) (%and (%= p %<=) (p 3)))) => #f
+ (%which () (%let (p) (%and (%= p 'nonfunc) (p 3)))) => #f
+
  (%which () (%maplist %= '(1 2 3) '(1 2 3))) => empty
  (%more) => #f
  (%which () (%maplist %= '(1 2 3) '(3 2 1))) => #f
