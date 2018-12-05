@@ -71,7 +71,19 @@
                  [ey (in-compound-struct y)])
          (= ex ey))))
 
-(define-struct logic-var (val) #:mutable)
+(define-struct logic-var
+  (val)
+  #:mutable
+  #:property prop:procedure
+  (lambda (v . args)
+    ; Coerce (v arg ...) to a goal, equivalent to %fail if v is not a procedure of the correct arity
+    (lambda (fk)
+      (let ([pred (if (unbound-logic-var? v)
+                      (fk 'fail)
+                      (logic-var-val* v))])
+        (if (and (procedure? pred) (procedure-arity-includes? pred (length args)))
+            ((apply pred args) fk)
+            (fk 'fail))))))
 
 (define *unbound* '_)
 
