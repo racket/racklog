@@ -1145,7 +1145,7 @@ Logic variables which contain predicates may be used as the operator in
 predicate expressions:
 
 @interaction[#:eval racklog-eval
-(%which (p)
+(%which ()
   (%let (p)
     (%and (%= p %knows)
           (p 'Odysseus 'TeX))))
@@ -1165,9 +1165,10 @@ which succeeds.
 This allows us to reason about predicates themselves. For example:
 
 @interaction[#:eval racklog-eval
-(%find-all (p)
-  (%and (%member p (list %knows %parent))
-        (p 'Odysseus 'Penelope)))
+(%which (p)
+  (%member p (list %knows %parent))
+  (p 'Odysseus 'Penelope))
+(%more)
 ]
 
 Here we test which of the predicates @racket[%knows] and
@@ -1178,47 +1179,19 @@ The goal @racket[(%knows 'Odysseus 'Penelope)] succeeds, but
 @racket[(%parent 'Odysseus 'Penelope)] fails. Hence the only possible value for
 @racket[p] is @racket[%knows].
 
-If @racket[p] is an unbound logic variable, does not contain a predicate, or
-the predicate does not accept as many arguments as provided, the goal
-@racket[(p arg ...)] is equivalent to @racket[%fail].
-
-Racklog also provides two predicates for defining relations involving arbitrary
-predicates.
-
-@subsection{@racket[%call]}
-
-The goal
-
-@racketblock[
-(%call P E ...)
-]
-
-succeeds if @racket[P] is a predicate that accepts as many arguments as there
-are @racket[E]s and if the goal @racket[(P E ...)] succeeds. For example:
+However, logic variables used as a predicate must be instantiated. Since the set
+of defined predicates is not enumerable by Racklog, an unbound query will fail:
 
 @interaction[#:eval racklog-eval
-(%which () (%call %knows 'Odysseus 'TeX))
+(%which (p) (p 'Odysseus 'Penelope))
 ]
 
-In this case, the goal
-
-@racketblock[
-(%call %knows 'Odysseus 'TeX)
-]
-
-is equivalent to
-
-@racketblock[
-(%knows 'Odysseus 'TeX)
-]
-
-The @racket[%call] predicate is used to define relations which depend on the
-behavior of other predicates. We can define a predicate which tests for unary
-predicates that succeed with @racket['Odysseus] as their argument:
+We can define a higher-order predicate which tests for unary predicates that
+succeed with @racket['Odysseus] as their argument:
 
 @racketblock+eval[#:eval racklog-eval
 (define (%odyssean p)
-  (%call p 'Odysseus))
+  (p 'Odysseus))
 ]
 
 For example:
@@ -1235,25 +1208,66 @@ This succeeds because @racket[(%computer-literate 'Odysseus)] succeeds.
 
 This fails because @racket[(%compound 'Odysseus)] fails.
 
-The important feature of @racket[%call] is that it also works if the predicate
-argument is a logic variable:
+This also works if the predicate argument is a logic variable:
 
 @interaction[#:eval racklog-eval
-(%which ()
-  (%let (p)
-    (%and (%member p (list %computer-literate %compound))
-          (%odyssean p))))
+(%which (p)
+  (%member p (list %computer-literate %compound))
+  (%odyssean p))
 ]
 
-However, the predicate argument to @racket[%call] must be instantiated.
-Since the set of defined predicates is not enumerable by Racklog, an unbound
-query will fail:
+Compare this with the example above.
+
+Racklog also provides two predicates for defining relations involving arbitrary
+predicates.
+
+@subsection{@racket[%apply]}
+
+The @racket[%apply] predicate is analogous to convential Racket @racket[apply].
+
+The goal
+
+@racketblock[
+(%apply P L)
+]
+
+succeeds if @racket[L] is a list with elements @racket[E], ..., and if
+@racket[P] is a predicate that accepts as many arguments as there are
+@racket[E]s, and if the goal @racket[(P E ...)] succeeds. For example:
 
 @interaction[#:eval racklog-eval
-(%which (p) (%odyssean p))
+(%which () (%apply %knows '(Odysseus TeX)))
+]
+
+In this case, the goal
+
+@racketblock[
+(%apply %knows '(Odysseus TeX))
+]
+
+is equivalent to
+
+@racketblock[
+(%knows 'Odysseus 'TeX)
+]
+
+The list argument to @racket[%apply] must be sufficiently instantiated to
+determine its length. The following goals succeed:
+
+@interaction[#:eval racklog-eval
+(%which () (%apply %knows (list 'Odysseus 'TeX)))
+(%which (X) (%apply %knows (list X 'TeX)))
+]
+
+but it is not possible to use @racket[%apply] with a list of unknown length:
+
+@interaction[#:eval racklog-eval
+(%which (X Y) (%apply %knows (cons X Y)))
 ]
 
 @subsection{@racket[%andmap]}
+
+The @racket[%andmap] predicate is analogous to convential Racket @racket[andmap].
 
 The goal
 
@@ -1262,7 +1276,7 @@ The goal
 ]
 
 succeeds if all the @racket[L]s are lists of equal length, and the goal
-@racket[(%call P E ...)] succeeds for each set of elements @racket[E], ...
+@racket[(P E ...)] succeeds for each set of elements @racket[E], ...
 of the @racket[L]s. For example:
 
 @interaction[#:eval racklog-eval
@@ -1564,16 +1578,26 @@ instantiated, ie, it has no unbound variable in it.}
 
 @subsection{Higher-order Predicates}
 
-@defpred[(%call [P unifiable?] [E unifiable?] ...)]{
-The goal @racket[(%call P E ...)] succeeds if @racket[P] is a predicate
-accepting as many arguments as there are @racket[E]s and the goal
+@defpred[(%apply [P unifiable?] [L unifiable?])]{
+The goal @racket[(%apply P L)] succeeds if @racket[L] is a list
+with elements @racket[E], ..., and if @racket[P] is a predicate
+accepting as many arguments as there are @racket[E]s, and if the goal
 @racket[(P E ...)] succeeds.
+
+The goal will fail if @racket[L] is not sufficiently instantiated
+to determine its length.
+
+For example, the goal
+@racketblock[(%apply %= (list 1 X))]
+is equivalent to
+@racketblock[(%= 1 X)]
+which succeeds if @racket[X] can be unified with @racket[1].
 }
 
 @defpred[(%andmap [P unifiable?] [L unifiable?] ...+)]{
 The goal @racket[(%andmap P L ...)] succeeds if all the values
 @racket[L], ..., are lists of equal length, and if the goal
-@racket[(%call P E ...)] succeeds for each set of values @racket[E], ...,
+@racket[(P E ...)] succeeds for each set of values @racket[E], ...,
 taken in turn from each of the lists @racket[L], ...
 
 As an example, in particular the goal

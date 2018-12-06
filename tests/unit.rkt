@@ -560,29 +560,33 @@
  (%which () %true %true) => empty
  (%more) => #f
 
- (%which () (%call %= 1 1)) => empty
+ (%which () (%let (p) (%and (%= p %<=) (p 4 11)))) => empty
  (%more) => #f
- (%which () (%call %= 1 2)) => #f
- (%which () (%call %=)) => #f
- (%which () (%call %= 1 2 3)) => #f
- (%which () (%call (_) 1)) => #f
- (%which () (%call 'not-a-procedure 1)) => #f
+ (%which () (%let (p) (%and (%= p %<=) (p 3)))) => #f
+ (%which () (%let (p) (%and (%= p 'nonfunc) (p 3)))) => #f
 
  (let* ([%foo (lambda (x) (%= x 'foo))]
         [%bar (lambda (x) (%= x 'bar))]
         [%foobar (lambda (x) (%or (%foo x) (%bar x)))])
-   (test (%which (x) (%call %foobar x)) => `([x . foo])
+   (test (%which (x) (%foobar x)) => `([x . foo])
          (%more) => `([x . bar])
          (%more) => #f
-         (%which (x) (%let (p) (%and (%or (%= p %foo) (%= p %bar)) (%call p x))))
+         (%which (x) (%let (p) (%and (%or (%= p %foo) (%= p %bar)) (p x))))
          => `([x . foo])
          (%more) => `([x . bar])
          (%more) => #f))
 
- (%which () (%let (p) (%and (%= p %<=) (p 4 7)))) => empty
+ (%which () (%apply %= '(1 1))) => empty
  (%more) => #f
- (%which () (%let (p) (%and (%= p %<=) (p 3)))) => #f
- (%which () (%let (p) (%and (%= p 'nonfunc) (p 3)))) => #f
+ (%which () (%apply %= '(1 2))) => #f
+ (%which () (%apply %= (list 1 (_)))) => empty
+ (%more) => #f
+ (%which () (%apply %= '())) => #f
+ (%which () (%apply %= '(1 2 3))) => #f
+ (%which () (%apply %= (cons 1 (_)))) => #f
+ (%which () (%apply %= 'not-a-list)) => #f
+ (%which () (%apply (_) '(1))) => #f
+ (%which () (%apply 'not-a-procedure '(1))) => #f
 
  (%which () (%andmap %= '(1 2 3) '(1 2 3))) => empty
  (%more) => #f
@@ -601,6 +605,6 @@
  => `([p . ,%/=])
  (%more) => `([p . ,%<=])
  (%more) => #f
- (%which () (%call %andmap %var (list (_)))) => empty
+ (%which () (%apply %andmap (list %var (list (_))))) => empty
  (%more) => #f
  )
