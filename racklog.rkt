@@ -36,13 +36,19 @@
               ...)
          __fk)))))
 
-(define (%call pred . args)
+(define (%apply pred args)
   (lambda (fk)
-    (let ([pred-v (if (and (logic-var? pred) (unbound-logic-var? pred))
-                      (fk 'fail)
-                      (logic-var-val* pred))])
-      (if (and (procedure? pred-v) (procedure-arity-includes? pred-v (length args)))
-          ((apply pred-v args) fk)
+    (let ([pred-v (if (logic-var? pred)
+                      (logic-var-val pred)
+                      pred)]
+          [args-v (let lv->list ([lv args])
+                    (let ([v (if (logic-var? lv) (logic-var-val lv) lv)])
+                      (cond
+                        [(null? v) v]
+                        [(pair? v) (cons (car v) (lv->list (cdr v)))]
+                        [else (fk 'fail)])))])
+      (if (and (procedure? pred-v) (procedure-arity-includes? pred-v (length args-v)))
+          ((apply pred-v args-v) fk)
           (fk 'fail)))))
 
 (define (%andmap pred lst . rest)
@@ -57,7 +63,7 @@
         (sk (let ([heads (map (lambda (lst) (_)) lsts)]
                   [tails (map (lambda (lst) (_)) lsts)])
               (let* ([fk (foldl (lambda (lst h t fk) ((%= lst (cons h t)) fk)) fk lsts heads tails)]
-                     [fk ((apply %call pred heads) fk)])
+                     [fk ((%apply pred heads) fk)])
                 ((apply %andmap pred tails) fk)))))
       (fk 'fail))))
 
@@ -430,9 +436,9 @@
  [%>= (unifiable? unifiable? . -> . goal/c)]
  [%andmap (unifiable? unifiable? unifiable? ... . -> . goal/c)]
  [%append (unifiable? unifiable? unifiable? . -> . goal/c)]
+ [%apply (unifiable? unifiable? . -> . goal/c)]
  [%bag-of (unifiable? goal/c unifiable? . -> . goal/c)]
  [%bag-of-1 (unifiable? goal/c unifiable? . -> . goal/c)]
- [%call (unifiable? unifiable? ... . -> . goal/c)]
  [%compound (unifiable? . -> . goal/c)]
  [%constant (unifiable? . -> . goal/c)]
  [%copy (unifiable? unifiable? . -> . goal/c)]
