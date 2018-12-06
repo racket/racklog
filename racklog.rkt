@@ -45,7 +45,7 @@
           ((apply pred-v args) fk)
           (fk 'fail)))))
 
-(define (%maplist pred lst . rest)
+(define (%andmap pred lst . rest)
   (define lsts (cons lst rest))
   (lambda (fk)
     (let/racklog-sk sk
@@ -58,7 +58,7 @@
                   [tails (map (lambda (lst) (_)) lsts)])
               (let* ([fk (foldl (lambda (lst h t fk) ((%= lst (cons h t)) fk)) fk lsts heads tails)]
                      [fk ((apply %call pred heads) fk)])
-                ((apply %maplist pred tails) fk)))))
+                ((apply %andmap pred tails) fk)))))
       (fk 'fail))))
 
 (define-syntax-parameter !
@@ -428,6 +428,7 @@
  [%== (unifiable? unifiable? . -> . goal/c)]
  [%> (unifiable? unifiable? . -> . goal/c)]
  [%>= (unifiable? unifiable? . -> . goal/c)]
+ [%andmap (unifiable? unifiable? unifiable? ... . -> . goal/c)]
  [%append (unifiable? unifiable? unifiable? . -> . goal/c)]
  [%bag-of (unifiable? goal/c unifiable? . -> . goal/c)]
  [%bag-of-1 (unifiable? goal/c unifiable? . -> . goal/c)]
@@ -439,7 +440,6 @@
  [%fail goal/c]
  [%freeze (unifiable? unifiable? . -> . goal/c)]
  [%if-then-else (goal/c goal/c goal/c . -> . goal/c)]
- [%maplist (unifiable? unifiable? unifiable? ... . -> . goal/c)]
  [%melt (unifiable? unifiable? . -> . goal/c)]
  [%melt-new (unifiable? unifiable? . -> . goal/c)]
  [%member (unifiable? unifiable? . -> . goal/c)]

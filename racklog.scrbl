@@ -1212,12 +1212,12 @@ query will fail:
 (%which (p) (%odyssean p))
 ]
 
-@subsection{@racket[%maplist]}
+@subsection{@racket[%andmap]}
 
 The goal
 
 @racketblock[
-(%maplist P L ...+)
+(%andmap P L ...+)
 ]
 
 succeeds if all the @racket[L]s are lists of equal length, and the goal
@@ -1225,13 +1225,13 @@ succeeds if all the @racket[L]s are lists of equal length, and the goal
 of the @racket[L]s. For example:
 
 @interaction[#:eval racklog-eval
-(%which () (%maplist %knows '(Odysseus Penelope) '(TeX Prolog)))
+(%which () (%andmap %knows '(Odysseus Penelope) '(TeX Prolog)))
 ]
 
 In this case, the goal
 
 @racketblock[
-(%maplist %knows '(Odysseus Penelope) '(TeX Prolog))
+(%andmap %knows '(Odysseus Penelope) '(TeX Prolog))
 ]
 
 is equivalent to
@@ -1529,14 +1529,14 @@ accepting as many arguments as there are @racket[E]s and the goal
 @racket[(P E ...)] succeeds.
 }
 
-@defpred[(%maplist [P unifiable?] [L unifiable?] ...+)]{
-The goal @racket[(%maplist P L ...)] succeeds if all the values
+@defpred[(%andmap [P unifiable?] [L unifiable?] ...+)]{
+The goal @racket[(%andmap P L ...)] succeeds if all the values
 @racket[L], ..., are lists of equal length, and if the goal
 @racket[(%call P E ...)] succeeds for each set of values @racket[E], ...,
 taken in turn from each of the lists @racket[L], ...
 
 As an example, in particular the goal
-@racket[(%maplist %<= '(1 2 3) '(4 5 6))] is equivalent to
+@racket[(%andmap %<= '(1 2 3) '(4 5 6))] is equivalent to
 @racketblock[
 (%and (%<= 1 4)
       (%<= 2 5)

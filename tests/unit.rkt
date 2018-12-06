@@ -584,23 +584,23 @@
  (%which () (%let (p) (%and (%= p %<=) (p 3)))) => #f
  (%which () (%let (p) (%and (%= p 'nonfunc) (p 3)))) => #f
 
- (%which () (%maplist %= '(1 2 3) '(1 2 3))) => empty
+ (%which () (%andmap %= '(1 2 3) '(1 2 3))) => empty
  (%more) => #f
- (%which () (%maplist %= '(1 2 3) '(3 2 1))) => #f
+ (%which () (%andmap %= '(1 2 3) '(3 2 1))) => #f
  (%more) => #f
- (%which () (%maplist %= '(1 2 3) '(1 2))) => #f
- (%which () (%maplist %= '(1 2 3) 'bad)) => #f
- (%which () (%maplist %= '(1 2 3))) => #f
- (%which () (%maplist %= '(1) '(2) '(3))) => #f
- (%which () (%maplist %= '() '())) => empty
+ (%which () (%andmap %= '(1 2 3) '(1 2))) => #f
+ (%which () (%andmap %= '(1 2 3) 'bad)) => #f
+ (%which () (%andmap %= '(1 2 3))) => #f
+ (%which () (%andmap %= '(1) '(2) '(3))) => #f
+ (%which () (%andmap %= '() '())) => empty
  (%more) => #f
- (%which (x) (%maplist %= '(1 2 3) (cons 1 x))) => `([x . (2 3)])
+ (%which (x) (%andmap %= '(1 2 3) (cons 1 x))) => `([x . (2 3)])
  (%more) => #f
  (%which (p) (%or (%= p %=) (%= p %/=) (%= p %<=))
-             (%maplist p '(1 2 3) '(2 3 4)))
+             (%andmap p '(1 2 3) '(2 3 4)))
  => `([p . ,%/=])
  (%more) => `([p . ,%<=])
  (%more) => #f
- (%which () (%call %maplist %var (list (_)))) => empty
+ (%which () (%call %andmap %var (list (_)))) => empty
  (%more) => #f
  )
