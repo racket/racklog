@@ -1141,7 +1141,48 @@ and @racket[%set-of] but fail if the resulting bag or set is empty.
 
 @section[#:tag "meta"]{Higher-order Predicates}
 
-Racklog provides two predicates for defining relations involving arbitrary
+Logic variables which contain predicates may be used as the operator in
+predicate expressions:
+
+@interaction[#:eval racklog-eval
+(%which (p)
+  (%let (p)
+    (%and (%= p %knows)
+          (p 'Odysseus 'TeX))))
+]
+
+First the logic variable @racket[p] is unified with the predicate @racket[%knows].
+In the expression
+
+@racketblock[(p 'Odysseus 'TeX)]
+
+@racket[p] is replaced by its value @racket[%knows] to become
+
+@racketblock[(%knows 'Odysseus 'TeX)]
+
+which succeeds.
+
+This allows us to reason about predicates themselves. For example:
+
+@interaction[#:eval racklog-eval
+(%find-all (p)
+  (%and (%member p (list %knows %parent))
+        (p 'Odysseus 'Penelope)))
+]
+
+Here we test which of the predicates @racket[%knows] and
+@racket[%parent] succeed when given the arguments @racket['Odysseus]
+and @racket['Penelope].
+
+The goal @racket[(%knows 'Odysseus 'Penelope)] succeeds, but
+@racket[(%parent 'Odysseus 'Penelope)] fails. Hence the only possible value for
+@racket[p] is @racket[%knows].
+
+If @racket[p] is an unbound logic variable, does not contain a predicate, or
+the predicate does not accept as many arguments as provided, the goal
+@racket[(p arg ...)] is equivalent to @racket[%fail].
+
+Racklog also provides two predicates for defining relations involving arbitrary
 predicates.
 
 @subsection{@racket[%call]}
