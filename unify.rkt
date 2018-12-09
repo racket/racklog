@@ -45,10 +45,11 @@
 (require racket/sequence)
 (define (in-compound-struct s)
   (define-values (stype _) (struct-info s))
-  (define-values (name init-field-cnt auto-field-cnt accessor-proc mutator-proc immutable-k-list super-type skipped?) (struct-type-info stype))
-  (define total-field-cnt (+ init-field-cnt)
-    #;(compound-struct-type-field-cnt stype))
-  (sequence-map (curry accessor-proc s) (in-range total-field-cnt)))
+  (let loop ([stype stype])
+    (define-values (name init-field-cnt auto-field-cnt accessor-proc mutator-proc immutable-k-list super-type skipped?) (struct-type-info stype))
+    (sequence-append
+     (if super-type (loop super-type) '())
+     (sequence-map (curry accessor-proc s) (in-range init-field-cnt)))))
 
 (define (compound-struct-map f s)
   (define-values (stype _) (struct-info s))
@@ -63,8 +64,10 @@
   (for/and ([e (in-compound-struct s)])
     (f e)))
 (define (compound-struct-same? x y)
-  (define-values (xtype _) (struct-info x))
-  ((struct-type-make-predicate xtype) y))  
+  (define-values (xtype xskipped?) (struct-info x))
+  (define-values (ytype yskipped?) (struct-info y))
+  (and ((struct-type-make-predicate xtype) y)
+       ((struct-type-make-predicate ytype) x)))
 (define (compound-struct-cmp x y =)
   (and (compound-struct-same? x y)
        (for/and ([ex (in-compound-struct x)]
@@ -527,7 +530,10 @@
   (not (compound-struct? v)))
 (define (compound-struct? v)
   (let-values ([(stype skipped?) (struct-info v)])
-    (and stype (not skipped?))))
+    (and stype (not skipped?)
+         (let loop ([stype stype])
+           (define-values (name init-field-cnt auto-field-cnt accessor-proc mutator-proc immutable-k-list super-type skipped?) (struct-type-info stype))
+           (and (not skipped?) (or (not super-type) (loop super-type)))))))
 
 (define (atom? x)
   (or* x boolean? number? string? bytes? char? symbol?
