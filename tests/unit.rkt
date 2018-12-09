@@ -151,7 +151,10 @@
               (never (make-foo 2 1) (make-foo 1 1))
               (never (make-foo 1 2) (make-foo 1 1))
               (never (make-foo 2 2) (make-foo 1 1))
-              (constant (make-foo 1 1)))]
+              (constant (make-foo 1 1)))
+            (define (d-struct-test make-foo make-bar)
+              (never (make-foo 1) (make-bar 1 1))
+              (never (make-bar 1 1) (make-foo 1)))]
       (local [(define-struct foo (x y))]
         (test #:failure-prefix "default"
               (a-struct-test make-foo)))
@@ -169,7 +172,27 @@
               (define another-inspector (make-inspector some-inspector))
               (define-struct foo (x y) #:inspector another-inspector)]
         (test #:failure-prefix "sibling -> child"
-              (a-struct-test make-foo))))))
+              (a-struct-test make-foo)))
+      (local [(define-struct foo (x) #:transparent)
+              (define-struct (bar foo) (y) #:transparent)]
+        (test #:failure-prefix "derived"
+              (cs-struct-test make-bar)
+              (d-struct-test make-foo make-bar)))
+      (local [(define-struct foo (x))
+              (define-struct (bar foo) (y) #:transparent)]
+        (test #:failure-prefix "transparent derived from opaque"
+              (a-struct-test make-bar)
+              (d-struct-test make-foo make-bar)))
+      (local [(define-struct foo (x) #:transparent)
+              (define-struct (bar foo) (y))]
+        (test #:failure-prefix "opaque derived from transparent"
+              (a-struct-test make-bar)
+              (d-struct-test make-foo make-bar)))
+      (local [(define-struct foo (x))
+              (define-struct (bar foo) (y))]
+        (test #:failure-prefix "opaque derived from opaque"
+              (a-struct-test make-bar)
+              (d-struct-test make-foo make-bar))))))
  
  (test
   #:failure-prefix "unify + logic var"
