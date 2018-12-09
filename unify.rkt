@@ -85,7 +85,7 @@
             ((apply pred args) fk)
             (fk 'fail))))))
 
-(define *unbound* '_)
+(define *unbound* (string->uninterned-symbol "_"))
 
 ;;unbound refs point to themselves
 (define (make-ref [val *unbound*])
@@ -153,8 +153,9 @@
   (uni-match 
    v
    [(? logic-var? s)
-    (if (frozen-logic-var? s) s
-        (logic-var-val* (logic-var-val s)))]
+    (cond [(unbound-logic-var? s) '_]
+          [(frozen-logic-var? s) s]
+          [else (logic-var-val* (logic-var-val s))])]
    [(cons l r)
     (cons (logic-var-val* l) (logic-var-val* r))]
    [(mcons l r)

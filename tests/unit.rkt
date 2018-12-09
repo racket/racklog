@@ -259,6 +259,8 @@
  ; Unit tests
  (logic-var? (_))
  
+ (%which (x) (%= x '_) (%= x 'foo)) => #f
+ 
  (%which () (%/= 1 1)) => #f
  (%which () (%/= 1 2)) => empty
  (%more) => #f
