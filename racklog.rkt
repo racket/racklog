@@ -75,8 +75,9 @@
     ((%cut-delimiter g)
      (lambda (__fk)
        (let ((this-! (lambda (__fk2)
-                       (__fk2 'unwind-trail)
-                       __fk)))
+                       (lambda (msg)
+                         (__fk2 'unwind-trail)
+                         (__fk msg)))))
          (syntax-parameterize 
           ([! (make-rename-transformer #'this-!)])
           ((logic-var-val* g) __fk)))))))
@@ -97,10 +98,9 @@
                     fail-case))
                  (define this-! 
                    (lambda (fk1) 
-                     (λ (fk2)
-                       ;; XXX could be (fail-unify 'unwind-trail)
-                       (unify-cleanup)
-                       (fail-relation 'fail))))
+                     (lambda (msg)
+                       (fk1 'unwind-trail)
+                       (fail-relation msg))))
                  (syntax-parameterize 
                      ([! (make-rename-transformer #'this-!)])
                    (__sk 
