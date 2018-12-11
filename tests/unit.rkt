@@ -451,6 +451,24 @@
  (%which () (%cut-delimiter (%or (%and ! %true) %true))) => empty
  (%more) => #f
  
+ (%which (x) (%not (%= x 1))) => #f
+ (%which (x) (%or (%not (%= x 1)) %true)) => `([x . _])
+ (%more) => #f
+ (%which (x) (%not (%not (%= x 1)))) => `([x . _])
+ (%more) => #f
+ (%which (x) (%if-then-else (%= x 1) %true %fail)) => `([x . 1])
+ (%more) => #f
+ (%which (x) (%if-then-else (%and (%= x 1) (%= x 2)) %true %true)) => `([x . _])
+ (%more) => #f
+ (%which (x) (%cut-delimiter (%and (%= x 1) !))) => `([x . 1])
+ (%more) => #f
+ (let ([r (%rel (x) [(x) (%= x 1) !])]) (%which (x) (%or (r x) %true))) => `([x . 1])
+ (%more) => `([x . _])
+ (%more) => #f
+ (%which (x) (%or ((%rel () [() (%= x 1) !])) %true)) => `([x . 1])
+ (%more) => `([x . _])
+ (%more) => #f
+ 
  (%which () (%empty-rel 1 1)) => #f
  
  (%which () %fail) => #f
