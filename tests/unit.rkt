@@ -469,6 +469,26 @@
  (%more) => `([x . _])
  (%more) => #f
  
+ (%which (x y)
+   (%or (%= x 1) (%= x 2))
+   (%cut-delimiter (%and (%or (%= x 2) (%= y 'foo))
+                         (%or %true)
+                         !)))
+ => `([x . 1] [y . foo])
+ (%more) => `([x . 2] [y . _])
+ (%more) => #f
+ 
+ (%which (x y)
+   (%or (%= x 1) (%= x 2))
+   (%cut-delimiter (%and (%or (%= x 2) (%= y 'foo))
+                         ((%rel () [()]))
+                         !)))
+ => `([x . 1] [y . foo])
+ (%more) => `([x . 2] [y . _])
+ (%more) => #f
+ 
+ (%which (x) (%or (%cut-delimiter (%and (%= x 1) (%cut-delimiter %true) ! %fail)) %true)) => `([x . _])
+ 
  (%which () (%empty-rel 1 1)) => #f
  
  (%which () %fail) => #f
