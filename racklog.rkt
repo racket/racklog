@@ -23,7 +23,7 @@
     ((%or g ...)
      (lambda (__fk)
        (let/racklog-sk __sk
-         (let/racklog-fk __fk
+         (let/racklog-fk (__fk __fk)
            (__sk ((logic-var-val* g) __fk)))
          ...
          (__fk 'fail))))))
@@ -56,10 +56,10 @@
   (lambda (fk)
     (let/racklog-sk sk
       ; Base case (all lists empty)
-      (let/racklog-fk fk
+      (let/racklog-fk (fk fk)
         (sk (foldl (lambda (lst fk) ((%= lst '()) fk)) fk lsts)))
       ; Call and recurse
-      (let/racklog-fk fk
+      (let/racklog-fk (fk fk)
         (sk (let ([heads (map (lambda (lst) (_)) lsts)]
                   [tails (map (lambda (lst) (_)) lsts)])
               (let* ([fk (foldl (lambda (lst h t fk) ((%= lst (cons h t)) fk)) fk lsts heads tails)]
@@ -76,7 +76,7 @@
      (lambda (__fk)
        (let ((this-! (lambda (__fk2)
                        (lambda (msg)
-                         (__fk2 'unwind-trail)
+                         (__fk2 __fk)
                          (__fk msg)))))
          (syntax-parameterize 
           ([! (make-rename-transformer #'this-!)])
@@ -91,7 +91,7 @@
           __sk
           (%let (v ...)
                 (let/racklog-fk 
-                 fail-case
+                 (fail-case fail-relation)
                  (define-values
                    (unify-cleanup fail-unify)
                    ((inner-unify __fmls (list a ...))
@@ -99,7 +99,7 @@
                  (define this-! 
                    (lambda (fk1) 
                      (lambda (msg)
-                       (fk1 'unwind-trail)
+                       (fk1 fail-relation)
                        (fail-relation msg))))
                  (syntax-parameterize 
                      ([! (make-rename-transformer #'this-!)])
@@ -372,13 +372,13 @@
   (call-with-current-continuation (λ (k) e ...) racklog-prompt-tag))
 (define-syntax-rule (let/racklog-sk k e ...)
   (let/racklog-cc k e ...))
-(define (make-racklog-fk fk)
+(define (make-racklog-fk fk [uk #f])
   (λ (msg)
-    (if (not (eq? msg 'unwind-trail))
+    (if (not (procedure? msg))
       (fk 'fail)
-      #f)))
-(define-syntax-rule (let/racklog-fk k e ...)
-  (let/racklog-cc fk (let ([k (make-racklog-fk fk)]) e ...)))
+      (and uk (not (eq? uk msg)) (uk msg)))))
+(define-syntax-rule (let/racklog-fk (k uk) e ...)
+  (let/racklog-cc fk (let ([k (make-racklog-fk fk uk)]) e ...)))
 
 (define (%member x y)
   (%let (xs z zs)
@@ -404,7 +404,7 @@
         (())
         (() (%repeat))))
 
-(define fk? (symbol? . -> . any))
+(define fk? ((or/c symbol? procedure?) . -> . any))
 (define goal/c 
   (or/c goal-with-free-vars?
         (fk? . -> . fk?)))
