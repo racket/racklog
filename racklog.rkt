@@ -76,7 +76,7 @@
      (lambda (__fk)
        (let ((this-! (lambda (__fk2)
                        (lambda (msg)
-                         (__fk2 __fk)
+                         (and (not (equal? __fk2 __fk)) (__fk2 __fk))
                          (__fk msg)))))
          (syntax-parameterize 
           ([! (make-rename-transformer #'this-!)])
@@ -99,7 +99,7 @@
                  (define this-! 
                    (lambda (fk1) 
                      (lambda (msg)
-                       (fk1 fail-relation)
+                       (and (not (equal? fk1 fail-relation)) (fk1 fail-relation))
                        (fail-relation msg))))
                  (syntax-parameterize 
                      ([! (make-rename-transformer #'this-!)])
@@ -376,7 +376,7 @@
   (λ (msg)
     (if (not (procedure? msg))
       (fk 'fail)
-      (and uk (not (eq? uk msg)) (uk msg)))))
+      (and uk (not (equal? uk msg)) (uk msg)))))
 (define-syntax-rule (let/racklog-fk (k uk) e ...)
   (let/racklog-cc fk (let ([k (make-racklog-fk fk uk)]) e ...)))
 

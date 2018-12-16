@@ -456,9 +456,6 @@
     (define (cleanup-n-fail s)
       (cleanup s)
       (fk 'fail))
-    (define (unwind-trail s d)
-      (cleanup s)
-      (fk d))
     (define (unify1 t1 t2 s)
       (cond [(eqv? t1 t2) s]
             [(logic-var? t1)
@@ -521,7 +518,10 @@
     (values
      (λ () (cleanup s))
      (lambda (d)
-       (if (procedure? d) (unwind-trail s d) (cleanup-n-fail s))))))
+       (cleanup s)
+       (if (procedure? d)
+           (and (not (equal? fk d)) (fk d))
+           (fk 'fail))))))
 
 (define-syntax-rule (or* x f ...)
   (or (f x) ...))
