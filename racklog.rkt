@@ -77,7 +77,7 @@
        (let ((this-! (lambda (__fk2)
                        (lambda (msg)
                          (and (not (equal? __fk2 __fk)) (__fk2 __fk))
-                         (__fk msg)))))
+                         (and (not (equal? __fk msg)) (__fk msg))))))
          (syntax-parameterize 
           ([! (make-rename-transformer #'this-!)])
           ((logic-var-val* g) __fk)))))))
@@ -100,7 +100,7 @@
                    (lambda (fk1) 
                      (lambda (msg)
                        (and (not (equal? fk1 fail-relation)) (fk1 fail-relation))
-                       (fail-relation msg))))
+                       (and (not (equal? fail-relation msg)) (fail-relation msg)))))
                  (syntax-parameterize 
                      ([! (make-rename-transformer #'this-!)])
                    (__sk 
