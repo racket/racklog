@@ -76,8 +76,10 @@
      (lambda (__fk)
        (let ((this-! (lambda (__fk2)
                        (lambda (msg)
-                         (and (not (equal? __fk2 __fk)) (__fk2 __fk))
-                         (and (not (equal? __fk msg)) (__fk msg))))))
+                         ; Unwind any bindings in the body
+                         (unless (equal? __fk2 __fk) (__fk2 __fk))
+                         ; Pass on the message, skipping the body
+                         (unless (equal? __fk msg) (__fk msg))))))
          (syntax-parameterize 
           ([! (make-rename-transformer #'this-!)])
           ((logic-var-val* g) __fk)))))))
@@ -358,9 +360,9 @@
   (let/racklog-cc k e ...))
 (define (make-racklog-fk fk [uk #f])
   (λ (msg)
-    (if (not (procedure? msg))
-      (fk 'fail)
-      (and uk (not (equal? uk msg)) (uk msg)))))
+    (if (procedure? msg)
+        (when uk (unless (equal? uk msg) (uk msg))) ; unwind
+        (fk 'fail))))
 (define-syntax-rule (let/racklog-fk (k uk) e ...)
   (let/racklog-cc fk (let ([k (make-racklog-fk fk uk)]) e ...)))
 
