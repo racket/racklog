@@ -520,7 +520,7 @@
      (lambda (d)
        (cleanup s)
        (if (procedure? d)
-           (and (not (equal? fk d)) (fk d))
+           (unless (equal? fk d) (fk d)) ; unwind
            (fk 'fail))))))
 
 (define-syntax-rule (or* x f ...)
