@@ -468,6 +468,15 @@
  (%which (x) (%or ((%rel () [() (%= x 1) !])) %true)) => `([x . 1])
  (%more) => `([x . _])
  (%more) => #f
+ (%which (x y) (%= x 1) (%or (%cut-delimiter (%and (%= y 2) !)) %true)) => `([x . 1] [y . 2])
+ (%more) => `([x . 1] [y . _])
+ (%more) => #f
+ (%which (x) (%= x 1) (%or (%cut-delimiter !) %true)) => `([x . 1])
+ (%more) => `([x . 1])
+ (%more) => #f
+ (%which (x) (%= x 1) (%or ((%rel () [() !])) %true)) => `([x . 1])
+ (%more) => `([x . 1])
+ (%more) => #f
  
  (%which (x y)
    (%or (%= x 1) (%= x 2))
