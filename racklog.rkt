@@ -84,16 +84,28 @@
           ([! (make-rename-transformer #'this-!)])
           ((logic-var-val* g) __fk)))))))
 
+(struct relation (clauses)
+  #:property prop:procedure
+  (lambda (rel . __fmls)
+    (%cut-delimiter
+      (lambda (__fk)
+        (let/racklog-sk __sk
+          (for ([clause (in-list (relation-clauses rel))])
+            (let/racklog-fk (fail-clause __fk)
+              (__sk ((clause __fmls !) fail-clause))))
+          (__fk 'fail))))))
+
 (define-syntax %rel
   (syntax-rules ()
     ((%rel (v ...) ((a ...) subgoal ...) ...)
-     (lambda __fmls
-       (%let (v ...)
-         (%cut-delimiter
-           (%or
+     (relation
+      (list
+       (lambda (__fmls rel-cut)
+         (syntax-parameterize ([! (make-rename-transformer #'rel-cut)])
+           (%let (v ...)
              (%and (%= __fmls (list a ...))
-                   subgoal ...)
-             ...)))))))
+                   subgoal ...))))
+       ...)))))
 
 (define %fail
   (lambda (fk) (fk 'fail)))
@@ -228,8 +240,8 @@
 (define (%not g)
   (%if-then-else g %fail %true))
 
-(define (%empty-rel . args)
-  %fail)
+(define %empty-rel
+  (relation '()))
 
 (define-syntax %assert!
   (syntax-rules ()
@@ -237,9 +249,8 @@
      (set! rel-name
            (let ((__old-rel rel-name)
                  (__new-addition (%rel (v ...) ((a ...) subgoal ...) ...)))
-             (lambda __fmls
-               (%or (apply __old-rel __fmls)
-                    (apply __new-addition __fmls))))))))
+             (relation (append (relation-clauses __old-rel)
+                               (relation-clauses __new-addition))))))))
 
 (define-syntax %assert-after!
   (syntax-rules ()
@@ -247,9 +258,8 @@
      (set! rel-name
            (let ((__old-rel rel-name)
                  (__new-addition (%rel (v ...) ((a ...) subgoal ...) ...)))
-             (lambda __fmls
-               (%or (apply __new-addition __fmls)
-                    (apply __old-rel __fmls))))))))
+             (relation (append (relation-clauses __new-addition)
+                               (relation-clauses __old-rel))))))))
 
 (define (set-cons e s)
   (if (member e s) s (cons e s)))

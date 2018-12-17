@@ -597,6 +597,14 @@
  (let ([rel (%rel () [(1) !] [(1) (%repeat)])])
    (test (%which () (rel 1)) => empty
          (%more) => #f))
+ (let ([rel (%rel () [(2)])])
+   (%assert-after! rel () [(1) !])
+   (test (%which (x) (rel x)) => `([x . 1])
+         (%more) => #f))
+ (let ([rel (%rel () [(1) !])])
+   (%assert! rel () [(2)])
+   (test (%which (x) (rel x)) => `([x . 1])
+         (%more) => #f))
  
  (local [(define (many-%more n)
            (if (zero? n)
