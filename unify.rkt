@@ -4,7 +4,9 @@
          racket/match
          racket/function
          racket/vector
-         racket/set)
+         racket/set
+         racket/stream
+         "control.rkt")
 (provide (all-defined-out))
 
 ; same hash
@@ -75,34 +77,35 @@
          (= ex ey))))
 
 (define-struct logic-var
-  (val)
+  ()
   #:mutable
   #:property prop:procedure
   (lambda (v . args)
     ; Coerce (v arg ...) to a goal, equivalent to %fail if v is not a procedure of the correct arity
-    (lambda (fk)
-      (let ([pred (if (unbound-logic-var? v)
-                      (fk 'fail)
-                      (logic-var-val* v))])
-        (if (and (procedure? pred) (procedure-arity-includes? pred (length args)))
-            ((apply pred args) fk)
-            (fk 'fail))))))
+    (lambda (sk)
+      (lambda (fk)
+        (let ([pred (if (unbound-logic-var? v)
+                        (fk)
+                        (logic-var-val* v))])
+          (if (and (procedure? pred) (procedure-arity-includes? pred (length args)))
+              (((apply pred args) sk) fk)
+              (fk)))))))
 
 (define *unbound* (string->uninterned-symbol "_"))
 
-;;unbound refs point to themselves
-(define (make-ref [val *unbound*])
-  (make-logic-var val))
+(define (logic-var-val r)
+  (continuation-mark-set-first #f r *unbound* racklog-prompt-tag))
 
-(define _ make-ref)
+(define-syntax-rule (let/logic-var ([r v]) e ...)
+  (with-continuation-mark r v (begin e ...)))
+
+(define _ make-logic-var)
 (define (unbound-logic-var? r)
   (and (logic-var? r) (eq? (logic-var-val r) *unbound*)))
-(define (unbind-ref! r)
-  (set-logic-var-val! r *unbound*))
 
 (define-struct frozen (val))
 (define (freeze-ref r)
-  (make-ref (make-frozen r)))
+  (make-frozen r))
 (define (thaw-frozen-ref r)
   (frozen-val (logic-var-val r)))
 (define (frozen-logic-var? r)
@@ -309,7 +312,9 @@
   (loop f))
 
 (define (copy s)
-  (melt-new (freeze s)))
+  (let ([f (_)])
+    (let/logic-var ([f (freeze s)])
+      (melt-new f))))
 
 (define (ident? x y)
   (uni-match 
@@ -442,86 +447,78 @@
      [(? compound-struct? y) #f]
      [(? atom? y) (eqv? x y)])]))
 
-(define (unify t1 t2)
-  (define iu (inner-unify t1 t2))
-  (λ (fk)
-    (define-values (cleanup k)
-      (iu fk))
-    k))
-
-(define (inner-unify t1 t2)
+(define ((unify t1 t2) sk)
   (lambda (fk)
-    (define (cleanup s)
-      (for-each unbind-ref! s))
-    (define (cleanup-n-fail s)
-      (cleanup s)
-      (fk 'fail))
-    (define (unify1 t1 t2 s)
-      (cond [(eqv? t1 t2) s]
+    (define (unify1 t1 t2 next)
+      (cond [(eqv? t1 t2) (next)]
             [(logic-var? t1)
              (cond [(unbound-logic-var? t1)
                     (cond [(occurs-in? t1 t2)
-                           (cleanup-n-fail s)]
-                          [else 
-                           (set-logic-var-val! t1 t2)
-                           (list* t1 s)])]
+                           (fk)]
+                          [else
+                           (let/logic-var ([t1 t2])
+                             (next))])]
                    [(frozen-logic-var? t1)
                     (cond [(logic-var? t2)
                            (cond [(unbound-logic-var? t2)
-                                  (unify1 t2 t1 s)]
+                                  (unify1 t2 t1 next)]
                                  [(frozen-logic-var? t2)
-                                  (cleanup-n-fail s)]
+                                  (fk)]
                                  [else
-                                  (unify1 t1 (logic-var-val t2) s)])]
-                          [else (cleanup-n-fail s)])]
+                                  (unify1 t1 (logic-var-val t2) next)])]
+                          [else (fk)])]
                    [else 
-                    (unify1 (logic-var-val t1) t2 s)])]
-            [(logic-var? t2) (unify1 t2 t1 s)]
+                    (unify1 (logic-var-val t1) t2 next)])]
+            [(logic-var? t2) (unify1 t2 t1 next)]
             [(and (pair? t1) (pair? t2))
-             (unify1 (cdr t1) (cdr t2)
-                     (unify1 (car t1) (car t2) s))]
+             (unify1 (car t1) (car t2)
+                     (λ () (unify1 (cdr t1) (cdr t2) next)))]
             [(and (mpair? t1) (mpair? t2))
-             (unify1 (mcdr t1) (mcdr t2)
-                     (unify1 (mcar t1) (mcar t2) s))]
+             (unify1 (mcar t1) (mcar t2)
+                     (λ () (unify1 (mcdr t1) (mcdr t2) next)))]
             [(and (box? t1) (box? t2))
-             (unify1 (unbox t1) (unbox t2) s)]
+             (unify1 (unbox t1) (unbox t2) next)]
             [(and (vector? t1) (vector? t2))
              (if (= (vector-length t1)
                     (vector-length t2))
-                 (for/fold ([s s])
-                   ([v1 (in-vector t1)]
-                    [v2 (in-vector t2)])
-                   (unify1 v1 v2 s))
-                 (cleanup-n-fail s))]
+                 (let loop ([v1s (sequence->stream (in-vector t1))]
+                            [v2s (sequence->stream (in-vector t2))])
+                   (if (stream-empty? v1s)
+                       (next)
+                       (unify1 (stream-first v1s)
+                               (stream-first v2s)
+                               (λ () (loop (stream-rest v1s)
+                                           (stream-rest v2s))))))
+                 (fk))]
             [(and (hash? t1) (hash? t2))
              (if (and (same-hash-kind? t1 t2)
                       (= (hash-count t1) (hash-count t2)))
-                 (for/fold ([s s])
-                   ([(xk xv) (in-hash t1)])
-                   (if (hash-has-key? t2 xk)
-                       (unify1 xv (hash-ref t2 xk) s)
-                       (cleanup-n-fail s)))
-                 (cleanup-n-fail s))]
+                 (let loop ([xs (sequence->stream (in-hash t1))])
+                   (if (stream-empty? xs)
+                       (next)
+                       (let-values ([(xk xv) (stream-first xs)])
+                         (if (hash-has-key? t2 xk)
+                             (unify1 xv
+                                     (hash-ref t2 xk)
+                                     (λ () (loop (stream-rest xs))))
+                             (fk)))))
+                 (fk))]
             [(and (compound-struct? t1) (compound-struct? t2))
              (if (compound-struct-same? t1 t2)
-                 (for/fold ([s s])
-                   ([e1 (in-compound-struct t1)]
-                    [e2 (in-compound-struct t2)])
-                   (unify1 e1 e2 s))
-                 (cleanup-n-fail s))]
+                 (let loop ([e1s (sequence->stream (in-compound-struct t1))]
+                            [e2s (sequence->stream (in-compound-struct t2))])
+                   (if (stream-empty? e1s)
+                       (next)
+                       (unify1 (stream-first e1s)
+                               (stream-first e2s)
+                               (λ () (loop (stream-rest e1s)
+                                           (stream-rest e2s))))))
+                 (fk))]
             [(and (atom? t1) (atom? t2))
-             (if (equal? t1 t2) s
-                 (cleanup-n-fail s))]
+             (if (equal? t1 t2) (next) (fk))]
             [else
-             (cleanup-n-fail s)]))
-    (define s (unify1 t1 t2 empty))
-    (values
-     (λ () (cleanup s))
-     (lambda (d)
-       (cleanup s)
-       (if (procedure? d)
-           (unless (equal? fk d) (fk d)) ; unwind
-           (fk 'fail))))))
+             (fk)]))
+    (unify1 t1 t2 (λ () (sk fk)))))
 
 (define-syntax-rule (or* x f ...)
   (or (f x) ...))
