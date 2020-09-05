@@ -78,7 +78,6 @@
 
 (define-struct logic-var
   ()
-  #:mutable
   #:property prop:procedure
   (lambda (v . args)
     ; Coerce (v arg ...) to a goal, equivalent to %fail if v is not a procedure of the correct arity

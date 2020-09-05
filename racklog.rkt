@@ -32,9 +32,7 @@
 (define-syntax %and
   (syntax-rules ()
     ((%and)
-     (lambda (__sk)
-       (lambda (__fk)
-         (__sk __fk))))
+     %true)
     ((%and g gs ...)
      (lambda (__sk)
        (lambda (__fk)
@@ -64,7 +62,7 @@
       ; Base case (all lists empty)
       (let/racklog-fk fk
         ((foldr (lambda (lst sk) ((%= lst '()) sk)) sk lsts) fk))
-      ; Call and recurse
+      ; Call and recur
       (let/racklog-fk fk
         (let ([heads (map (lambda (lst) (_)) lsts)]
               [tails (map (lambda (lst) (_)) lsts)])
