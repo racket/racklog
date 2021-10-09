@@ -14,3 +14,6 @@
 (define pkg-desc "The implementation of the Racklog (embedded Prolog) language")
 
 (define pkg-authors '(jay))
+
+(define license
+  '(Apache-2.0 OR MIT))
