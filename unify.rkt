@@ -103,12 +103,6 @@
   (and (logic-var? r) (eq? (logic-var-val r) *unbound*)))
 
 (define-struct frozen (val))
-(define (freeze-ref r)
-  (make-frozen r))
-(define (thaw-frozen-ref r)
-  (frozen-val (logic-var-val r)))
-(define (frozen-logic-var? r)
-  (frozen? (logic-var-val r)))
 
 (define-syntax (uni-match stx)
   (syntax-case
@@ -159,7 +153,6 @@
    v
    [(? logic-var? s)
     (cond [(unbound-logic-var? s) '_]
-          [(frozen-logic-var? s) s]
           [else (logic-var-val* (logic-var-val s))])]
    [(cons l r)
     (cons (logic-var-val* l) (logic-var-val* r))]
@@ -182,7 +175,6 @@
               term
               [(? logic-var? term)
                (cond [(unbound-logic-var? term) #f]
-                     [(frozen-logic-var? term) #f]
                      [else (loop (logic-var-val term))])]
               [(cons l r)
                (or (loop l) (loop r))]
@@ -201,7 +193,6 @@
    x
    [(? logic-var? x)
     (cond [(unbound-logic-var? x) #f]
-          [(frozen-logic-var? x) #t]
           [else (constant? (logic-var-val x))])]
    [(cons l r) #f]
    [(mcons l r) #f]
@@ -216,7 +207,6 @@
    x
    [(? logic-var? x)
     (cond [(unbound-logic-var? x) #f]
-          [(frozen-logic-var? x) #f]
           [else (is-compound? (logic-var-val x))])]
    [(cons l r) #t]
    [(mcons l r) #t]
@@ -231,7 +221,6 @@
    x
    [(? logic-var? x)
     (cond [(unbound-logic-var? x) #t]
-          [(frozen-logic-var? x) #f]
           [else (var? (logic-var-val x))])]
    [(cons l r) (or (var? l) (var? r))]
    [(mcons l r) (or (var? l) (var? r))]
@@ -246,68 +235,74 @@
 (define (freeze v)
   (define dict (make-hasheq))
   (define (loop s)
-    (uni-match 
-     s
-     [(? logic-var? s)
-      (if (or (unbound-logic-var? s) (frozen-logic-var? s))
-          (hash-ref! dict s
-                     (lambda ()
-                       (freeze-ref s)))
-          (loop (logic-var-val s)))]
-     [(cons l r)
-      (cons (loop l) (loop r))]
-     [(mcons l r)
-      (mcons (loop l) (loop r))]
-     [(box v) (box (loop v))]
-     [(? vector? v)
-      (vector-map loop v)]
-     [(? hash? v)
-      (same-hash-map loop v)]
-     [(? compound-struct? cs) (compound-struct-map loop cs)]
-     [(? atom? s) s]))
+    (cond
+      [(frozen? s) (hash-set! dict (frozen-val s) s) s]
+      [else
+       (uni-match
+        s
+        [(? logic-var? s)
+         (if (unbound-logic-var? s)
+             (hash-ref! dict s
+                        (lambda ()
+                          (make-frozen s)))
+             (loop (logic-var-val s)))]
+        [(cons l r)
+         (cons (loop l) (loop r))]
+        [(mcons l r)
+         (mcons (loop l) (loop r))]
+        [(box v) (box (loop v))]
+        [(? vector? v)
+         (vector-map loop v)]
+        [(? hash? v)
+         (same-hash-map loop v)]
+        [(? compound-struct? cs) (compound-struct-map loop cs)]
+        [(? atom? s) s])]))
   (loop v))
 
 (define (melt f)
-  (uni-match 
-   f
-   [(? logic-var? f)
-    (cond [(unbound-logic-var? f) f]
-          [(frozen-logic-var? f) (thaw-frozen-ref f)]
-          [else (melt (logic-var-val f))])]
-   [(cons l r)
-    (cons (melt l) (melt r))]
-   [(mcons l r)
-    (mcons (melt l) (melt r))]
-   [(box v) (box (melt v))]
-   [(? vector? v)
-    (vector-map melt v)]
-   [(? hash? v)
-    (same-hash-map melt v)]
-   [(? compound-struct? cs) (compound-struct-map melt cs)]
-   [(? atom? s) s]))
+  (cond
+    [(frozen? f) (frozen-val f)]
+    [else
+     (uni-match
+      f
+      [(? logic-var? f)
+       (cond [(unbound-logic-var? f) f]
+             [else (melt (logic-var-val f))])]
+      [(cons l r)
+       (cons (melt l) (melt r))]
+      [(mcons l r)
+       (mcons (melt l) (melt r))]
+      [(box v) (box (melt v))]
+      [(? vector? v)
+       (vector-map melt v)]
+      [(? hash? v)
+       (same-hash-map melt v)]
+      [(? compound-struct? cs) (compound-struct-map melt cs)]
+      [(? atom? s) s])]))
 
 (define (melt-new f)
   (define dict (make-hasheq))
   (define (loop s)
-    (uni-match 
-     s
-     [(? logic-var? f)
-      (cond [(unbound-logic-var? f) f]
-            [(frozen-logic-var? f)
-             (hash-ref! dict f _)]
-            [else (loop (logic-var-val f))])]
-     [(cons l r)
-      (cons (loop l) (loop r))]
-     [(mcons l r)
-      (mcons (loop l) (loop r))]
-     [(box v) (box (loop v))]
-     [(? vector? v)
-      (vector-map loop v)]
-     [(? hash? v)
-      (same-hash-map loop v)]
-     [(? compound-struct? cs)
-      (compound-struct-map loop cs)]
-     [(? atom? s) s]))
+    (cond
+      [(frozen? s) (hash-ref! dict s _)]
+      [else
+       (uni-match
+        s
+        [(? logic-var? f)
+         (cond [(unbound-logic-var? f) f]
+               [else (loop (logic-var-val f))])]
+        [(cons l r)
+         (cons (loop l) (loop r))]
+        [(mcons l r)
+         (mcons (loop l) (loop r))]
+        [(box v) (box (loop v))]
+        [(? vector? v)
+         (vector-map loop v)]
+        [(? hash? v)
+         (same-hash-map loop v)]
+        [(? compound-struct? cs)
+         (compound-struct-map loop cs)]
+        [(? atom? s) s])]))
   (loop f))
 
 (define (copy s)
@@ -322,13 +317,6 @@
     (cond [(unbound-logic-var? x)
            (cond [(logic-var? y)
                   (cond [(unbound-logic-var? y) (eq? x y)]
-                        [(frozen-logic-var? y) #f]
-                        [else (ident? x (logic-var-val y))])]
-                 [else #f])]
-          [(frozen-logic-var? x)
-           (cond [(logic-var? y)
-                  (cond [(unbound-logic-var? y) #f]
-                        [(frozen-logic-var? y) (eq? x y)]
                         [else (ident? x (logic-var-val y))])]
                  [else #f])]
           [else (ident? (logic-var-val x) y)])]
@@ -337,7 +325,6 @@
      y
      [(? logic-var? y)
       (cond [(unbound-logic-var? y) #f]
-            [(frozen-logic-var? y) #f]
             [else (ident? x (logic-var-val y))])]
      [(cons yl yr) 
       (and (ident? xl yl) (ident? xr yr))]
@@ -352,7 +339,6 @@
      y
      [(? logic-var? y)
       (cond [(unbound-logic-var? y) #f]
-            [(frozen-logic-var? y) #f]
             [else (ident? x (logic-var-val y))])]
      [(cons yl yr) #f]
      [(mcons yl yr) 
@@ -367,7 +353,6 @@
      y
      [(? logic-var? y)
       (cond [(unbound-logic-var? y) #f]
-            [(frozen-logic-var? y) #f]
             [else (ident? x (logic-var-val y))])]
      [(cons yl yr) #f]
      [(mcons yl yr) #f]
@@ -381,7 +366,6 @@
      y
      [(? logic-var? y)
       (cond [(unbound-logic-var? y) #f]
-            [(frozen-logic-var? y) #f]
             [else (ident? x (logic-var-val y))])]
      [(cons yl yr) #f]
      [(mcons yl yr) #f]
@@ -401,7 +385,6 @@
      y
      [(? logic-var? y)
       (cond [(unbound-logic-var? y) #f]
-            [(frozen-logic-var? y) #f]
             [else (ident? x (logic-var-val y))])]
      [(cons yl yr) #f]
      [(mcons yl yr) #f]
@@ -421,7 +404,6 @@
      y
      [(? logic-var? y)
       (cond [(unbound-logic-var? y) #f]
-            [(frozen-logic-var? y) #f]
             [else (ident? x (logic-var-val y))])]
      [(cons yl yr) #f]
      [(mcons yl yr) #f]
@@ -436,7 +418,6 @@
      y
      [(? logic-var? y)
       (cond [(unbound-logic-var? y) #f]
-            [(frozen-logic-var? y) #f]
             [else (ident? x (logic-var-val y))])]
      [(cons yl yr) #f]
      [(mcons yl yr) #f]
@@ -457,15 +438,6 @@
                           [else
                            (let/logic-var ([t1 t2])
                              (next))])]
-                   [(frozen-logic-var? t1)
-                    (cond [(logic-var? t2)
-                           (cond [(unbound-logic-var? t2)
-                                  (unify1 t2 t1 next)]
-                                 [(frozen-logic-var? t2)
-                                  (fk)]
-                                 [else
-                                  (unify1 t1 (logic-var-val t2) next)])]
-                          [else (fk)])]
                    [else 
                     (unify1 (logic-var-val t1) t2 next)])]
             [(logic-var? t2) (unify1 t2 t1 next)]
