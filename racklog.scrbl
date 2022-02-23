@@ -901,7 +901,22 @@ The goal
 
 unifies @racket[_F] to the frozen version of @racket[_S].  Any lack
 of bindings in @racket[_S] are preserved no matter how much you
-toss @racket[_F] about.
+toss @racket[_F] about. Frozen variables will only unify with themselves. For example,
+in the following query, even though @racket[x] and @racket[y] are unbound, their frozen
+counterparts @racket[a] and @racket[b] will not unify with each other:
+
+@interaction[#:eval racklog-eval
+(%which (x y frozen a b)
+  (%freeze (list x y) (list a b))
+  (%= a b))]
+
+However, we can unify a frozen variable with itself:
+
+@interaction[#:eval racklog-eval
+
+(%which (x frozen y z)
+  (%freeze (list x x) (list y z))
+  (%= y z))]
 
 The goal
 
@@ -909,7 +924,15 @@ The goal
 (%melt _F _S)
 ]
 
-retrieves the object frozen in @racket[_F] into @racket[_S].
+retrieves the object frozen in @racket[_F] into @racket[_S]; the variables in @racket[_S] will
+be identical to those in the original object. For example:
+
+@interaction[#:eval racklog-eval
+(%which (x frozen melted)
+  (%freeze (list x x) frozen)
+  (%melt frozen melted)
+  (%= melted (list 2 2)))
+]
 
 The goal
 
@@ -919,7 +942,16 @@ The goal
 
 is similar to @racket[%melt],
 except that when @racket[_S] is made,  the unbound variables in
-@racket[_F] are replaced by brand-new unbound variables.
+@racket[_F] are replaced by brand-new unbound variables, respecting
+the existing equivalences between them, for example:
+
+@interaction[#:eval racklog-eval
+(%which (x y frozen a b c)
+  (%freeze (list x x y) frozen)
+  (%melt-new frozen (list a b c))
+  (%= a 'red)
+  (%= c 'green))
+]
 
 The goal
 
