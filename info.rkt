@@ -3,7 +3,7 @@
 (define collection "racklog")
 
 (define scribblings
-  '(("racklog.scrbl" (multi-page) (tool))))
+  '(("racklog.scrbl" (multi-page) ("Logic programming"))))
 (define deps '("base"
                "datalog"))
 (define build-deps '("eli-tester"
