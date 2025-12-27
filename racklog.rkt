@@ -338,8 +338,8 @@
 
 (define-syntax %find-all
   (syntax-rules ()
-    [(_ (v ...) g)
-     (list* (%which (v ...) g)
+    [(_ (v ...) g ...)
+     (list* (%which (v ...) g ...)
             (%more-list))]))
 
 (define (%more-list)
